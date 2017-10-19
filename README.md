@@ -1,7 +1,6 @@
 # Unscented Kalman Filter Project
 
-[![Travis](https://img.shields.io/travis/rust-lang/rust.svg)]()
-
+[![Build Status](https://travis-ci.org/Labonneguigue/CarND-Unscented-Kalman-Filter-Project.svg?branch=master)](https://travis-ci.org/Labonneguigue/CarND-Unscented-Kalman-Filter-Project)
 
 
 Self-Driving Car Engineer Nanodegree Program
