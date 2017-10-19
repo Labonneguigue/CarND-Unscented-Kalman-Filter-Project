@@ -1,3 +1,7 @@
+language: cpp
+
+install: ./install-mac.sh
+
 matrix:
   include:
     - os: osx
