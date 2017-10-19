@@ -1,4 +1,8 @@
-# Unscented Kalman Filter Project Starter Code
+# Unscented Kalman Filter Project
+
+[![Travis](https://img.shields.io/travis/rust-lang/rust.svg)]()
+
+
 
 Self-Driving Car Engineer Nanodegree Program
 
@@ -9,7 +13,10 @@ In this project I implemented an Unscented Kalman Filter to estimate the state o
 [image1]: images/CTRV-diff-eq.tiff "CTRV"
 [image2]: images/solution.tiff "solution"
 [image3]: images/process_noise.tiff "noise"
-
+[image4]: images/sigma.tiff "sigma"
+[image5]: images/augmentation.tiff "augmentation"
+[image6]: images/compute.tiff "compute"
+[image7]: images/prediction.tiff "prediction"
 
 ## Project Explanation
 
@@ -17,9 +24,13 @@ In this project I implemented an UKF using the CTRV motion model.
 
 As a quick reminder, a Kalman Filter only handles models with linear equations whereas the Extended and Unscented Kalman Filters handle non-linear equations. I have implemented an Extended Kalman Filter in my previous project that you can find [here](https://github.com/Labonneguigue/CarND-Extended-Kalman-Filter-Project).
 
-The CTRV model stands for Constant Turn Rate and Velocity magnitude model. It takes into account a turn rate \dot{varphi} into its state vector and would therefore predict the position of the car more accurately when it turns.
+The CTRV model stands for Constant Turn Rate and Velocity magnitude model. It takes into account a turn rate phi dot into its state vector and would therefore predict the position of the car more accurately when it turns.
 
 ![alt text][image1]
+
+Such as the Extended KF, the Unscented KF has a prediction step and a measurement step. I'll break them down:
+
+#### Prediction Step
 
 We need to compute the integral of these values over a small time step (delta t) to obtain equations giving us the values at the time t+1.
 
@@ -31,11 +42,32 @@ To model the stochastic part of the process model we add some process noise.
 
 The Extended Kalman Filter uses the Jacobian matrix to linearize non-linear functions. Instead of using this technique, the Unscented Kalman Filter takes the Posterior Gaussian distribution at time k and predicts the Prior Gaussian distribution at time k+1 through a process called Unscented Transformation. The tricky part is that we do not have any linear equations to do so.
 
-The Unscented Transformation chooses Sigma points. These points are supposed to represent accurately the Posterior Gaussian distribution. They are then inserted into the non-linear process function f().
+The Unscented Transformation chooses Sigma points. These points are supposed to represent accurately the Posterior Gaussian distribution. Here is a summary of how to generate them:
 
+![alt text][image4]
 
+I generated `2 * n_x + 1` points where `n_x` is the dimension of the state vector plus the dimension of the process noise. This technique is called Augmentation. It is because we do have non-linear process noise effects that it must be accounted for when generating the sigma points.
 
+In this project the dimensionality of my state vector is 5 and the process noise is 2. That makes it 15 sigma points.
+Lambda governs the spreading from the mean value.
 
+![alt text][image5]
+
+They are then inserted into the non-linear process model function f().
+
+![alt text][image6]
+
+From the obtained points, I then extracted a new Gaussian distribution. Here are the formulas I've used to compute the new mean and covariance at each prediction step.
+
+![alt text][image7]
+
+There are multiple ways to determine the weights omega. The only thing to remember is that it is linked to lambda, as you want to recover from the spreading inferred to the sigma points when they were calculated.
+
+#### Measurement Step
+
+At this step I would want to move the Gaussian distribution  Here are 2 often used shortcuts to reduce the computation:
+
+*   Reuse the generated sigma points from the prediction step.
 
 ## Installation
 
