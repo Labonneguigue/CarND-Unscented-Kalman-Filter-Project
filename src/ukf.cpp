@@ -7,6 +7,8 @@ using Eigen::MatrixXd;
 using Eigen::VectorXd;
 using std::vector;
 
+#define CLOSE_TO_ZERO 0.001
+
 /**
  * Initializes Unscented Kalman filter
  */
@@ -21,13 +23,13 @@ UKF::UKF()
     use_radar_ = true;
     
     // initial covariance matrix
-    P_ = MatrixXd(5, 5);
+    P_ = MatrixXd(n_x_, n_x_);
     
     // Process noise standard deviation longitudinal acceleration in m/s^2
-    std_a_ = 30;
+    std_a_ = 0.2; // was 30
     
     // Process noise standard deviation yaw acceleration in rad/s^2
-    std_yawdd_ = 30;
+    std_yawdd_ = 0.2; // was 30
     
     // Laser measurement noise standard deviation position1 in m
     std_laspx_ = 0.15;
@@ -43,6 +45,10 @@ UKF::UKF()
     
     // Radar measurement noise standard deviation radius change in m/s
     std_radrd_ = 0.3;
+    
+    n_aug_ = 7;
+    
+    lambda_ = 3 - n_aug_;
     
     /**
      TODO:
@@ -112,19 +118,97 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
      */
 }
 
-void UKF::GenerateSigmaPoints(MatrixXd& Xsig_out) {
+void UKF::GenerateAugmentedSigmaPoints(MatrixXd& Xsig_out) {
     
-    //calculate square root of P
-    MatrixXd A = P_.llt().matrixL();
+    //create augmented mean vector
+    VectorXd x_aug = VectorXd(7);
     
-    //set first column of sigma point matrix
-    Xsig_out.col(0)  = x_;
+    //create augmented state covariance
+    MatrixXd P_aug = MatrixXd(7, 7);
     
-    //set remaining sigma points
-    for (int i = 0; i < n_x_; i++)
+    //create sigma point matrix
+    MatrixXd Xsig_aug = MatrixXd(n_aug_, 2 * n_aug_ + 1);
+    
+    //create augmented mean state
+    x_aug.head(5) = x_;
+    x_aug(5) = 0;
+    x_aug(6) = 0;
+    
+    //create augmented covariance matrix
+    P_aug.fill(0.0);
+    P_aug.topLeftCorner(5,5) = P_;
+    P_aug(5,5) = std_a_*std_a_;
+    P_aug(6,6) = std_yawdd_*std_yawdd_;
+    
+    //create square root matrix
+    MatrixXd L = P_aug.llt().matrixL();
+    
+    //create augmented sigma points
+    Xsig_aug.col(0)  = x_aug;
+    for (int i = 0; i< n_aug_; i++)
     {
-        Xsig_out.col(i+1)     = x_ + sqrt(lambda_+n_x_) * A.col(i);
-        Xsig_out.col(i+1+n_x_) = x_ - sqrt(lambda_+n_x_) * A.col(i);
+        Xsig_aug.col(i+1)       = x_aug + sqrt(lambda_+n_aug_) * L.col(i);
+        Xsig_aug.col(i+1+n_aug_) = x_aug - sqrt(lambda_+n_aug_) * L.col(i);
     }
+    
+    //write result
+    Xsig_out = Xsig_aug;
+}
+
+void UKF::SigmaPointPrediction(MatrixXd& Xsig) {
+   
+    //Prepare [out] matrix
+    Eigen::MatrixXd Xsig_out(n_x_, 2 * n_aug_ + 1);
+    double delta_t = 0.1; //time diff in sec
+     //predict sigma points
+    for (int i = 0; i< (( 2* n_aug_) +1); i++)
+    {
+        //extract values for better readability
+        double p_x = Xsig(0,i);
+        double p_y = Xsig(1,i);
+        double v = Xsig(2,i);
+        double yaw = Xsig(3,i);
+        double yawd = Xsig(4,i);
+        double nu_a = Xsig(5,i);
+        double nu_yawdd = Xsig(6,i);
+        
+        //predicted state values
+        double px_p, py_p;
+        
+        //avoid division by zero
+        if (fabs(yawd) > CLOSE_TO_ZERO) {
+            px_p = p_x + v/yawd * ( sin (yaw + yawd*delta_t) - sin(yaw));
+            py_p = p_y + v/yawd * ( cos(yaw) - cos(yaw+yawd*delta_t) );
+        }
+        else {
+            px_p = p_x + v*delta_t*cos(yaw);
+            py_p = p_y + v*delta_t*sin(yaw);
+        }
+        
+        double v_p = v;
+        double yaw_p = yaw + yawd*delta_t;
+        double yawd_p = yawd;
+        
+        //add noise
+        px_p = px_p + 0.5*nu_a*delta_t*delta_t * cos(yaw);
+        py_p = py_p + 0.5*nu_a*delta_t*delta_t * sin(yaw);
+        v_p = v_p + nu_a*delta_t;
+        
+        yaw_p = yaw_p + 0.5*nu_yawdd*delta_t*delta_t;
+        yawd_p = yawd_p + nu_yawdd*delta_t;
+        
+        //write predicted sigma point into right column
+        Xsig_out(0,i) = px_p;
+        Xsig_out(1,i) = py_p;
+        Xsig_out(2,i) = v_p;
+        Xsig_out(3,i) = yaw_p;
+        Xsig_out(4,i) = yawd_p;
+    }
+    
+    Xsig.resize(n_x_, 2 * n_aug_ + 1);
+    Xsig = Xsig_out;
+}
+
+void UKF::PredictMeanAndCovariance(VectorXd& x_out, MatrixXd& P_out){
     
 }
