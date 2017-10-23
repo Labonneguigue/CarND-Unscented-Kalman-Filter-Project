@@ -1,4 +1,5 @@
 #include "ukf.h"
+#include "tools.h"
 #include "Eigen/Dense"
 #include <iostream>
 
@@ -49,6 +50,18 @@ UKF::UKF()
     n_aug_ = 7;
     
     lambda_ = 3 - n_aug_;
+    
+    //set vector for weights
+    weights_ = VectorXd(2*n_aug_+1);
+    double weight_0 = lambda_/(lambda_+n_aug_);
+    weights_(0) = weight_0;
+    for ( int i=1 ; i < (2*n_aug_) + 1 ; i++) {
+        weights_(i) = 0.5 / (n_aug_+lambda_);
+    }
+    
+    //set measurement dimension, radar can measure r, phi, and r_dot
+    n_z_ = 3;
+    
     
     /**
      TODO:
@@ -209,6 +222,151 @@ void UKF::SigmaPointPrediction(MatrixXd& Xsig) {
     Xsig = Xsig_out;
 }
 
-void UKF::PredictMeanAndCovariance(VectorXd& x_out, MatrixXd& P_out){
+void UKF::PredictMeanAndCovariance(MatrixXd& Xsig, VectorXd& x_pred, MatrixXd& P_pred){
     
+    // check size of predicted state x
+    assert(x_pred.size() == n_x_);
+    
+    // check that P is square and of the right size
+    assert(P_pred.cols() == n_x_);
+    assert(P_pred.rows() == n_x_);
+    
+    //predicted state mean
+    x_pred.fill(0.0);
+    for (int i = 0; i < 2 * n_aug_ + 1; i++) {  //iterate over sigma points
+        x_pred = x_pred + weights_(i) * Xsig.col(i);
+    }
+    
+    //predicted state covariance matrix
+    P_pred.fill(0.0);
+    for (int i = 0; i < 2 * n_aug_ + 1; i++) {  //iterate over sigma points
+        
+        // state difference
+        VectorXd x_diff = Xsig.col(i) - x_pred;
+        //angle normalization
+        Tools::NormalizeAngle(x_diff(3));
+
+        P_pred = P_pred + weights_(i) * x_diff * x_diff.transpose() ;
+    }
+}
+
+void UKF::PredictRadarMeasurement(MatrixXd Xsig_pred, VectorXd& z_out, MatrixXd& S_out) {
+    
+    //radar measurement noise standard deviation radius in m
+    double std_radr = 0.3;
+    
+    //radar measurement noise standard deviation angle in rad
+    double std_radphi = 0.0175;
+    
+    //radar measurement noise standard deviation radius change in m/s
+    double std_radrd = 0.1;
+    
+    //create matrix for sigma points in measurement space
+    MatrixXd Zsig = MatrixXd(n_z_, 2 * n_aug_ + 1);
+       
+    //transform sigma points into measurement space
+    for (int i = 0; i < 2 * n_aug_ + 1; i++) {  //2n+1 simga points
+        
+        // extract values for better readibility
+        double p_x = Xsig_pred(0,i);
+        double p_y = Xsig_pred(1,i);
+        double v  = Xsig_pred(2,i);
+        double yaw = Xsig_pred(3,i);
+        
+        double v1 = cos(yaw)*v;
+        double v2 = sin(yaw)*v;
+        
+        // measurement model
+        Zsig(0,i) = sqrt(p_x*p_x + p_y*p_y);                        //r
+        Zsig(1,i) = atan2(p_y,p_x);                                 //phi
+        Zsig(2,i) = (p_x*v1 + p_y*v2 ) / sqrt(p_x*p_x + p_y*p_y);   //r_dot
+    }
+    
+    //mean predicted measurement
+    assert(z_out.size() == n_z_);
+    
+    z_out.fill(0.0);
+    for (int i=0; i < 2*n_aug_+1; i++) {
+        z_out = z_out + weights_(i) * Zsig.col(i);
+    }
+    
+    //measurement covariance matrix S
+    assert(S_out.cols() == n_z_);
+    assert(S_out.rows() == n_z_);
+    
+    S_out.fill(0.0);
+    for (int i = 0; i < 2 * n_aug_ + 1; i++) {  //2n+1 simga points
+        //residual
+        VectorXd z_diff = Zsig.col(i) - z_out;
+        
+        //angle normalization
+        Tools::NormalizeAngle(z_diff(1));
+        
+        S_out = S_out + weights_(i) * z_diff * z_diff.transpose();
+    }
+    
+    //add measurement noise covariance matrix
+    MatrixXd R = MatrixXd(n_z_,n_z_);
+    R <<    std_radr*std_radr, 0, 0,
+            0, std_radphi*std_radphi, 0,
+            0, 0,std_radrd*std_radrd;
+    
+    S_out = S_out + R;
+}
+
+void UKF::UpdateState(MatrixXd &Xsig_pred,
+                      VectorXd &x_pred_mean,
+                      MatrixXd &P_pred_covs,
+                      MatrixXd &Zsig,
+                      VectorXd &z_pred,
+                      MatrixXd &S,
+                      VectorXd &z,
+                      VectorXd &x_out,
+                      MatrixXd &P_out) {
+    
+    // check Xsig_pred size
+    assert(Xsig_pred.rows() == n_x_);
+    assert(Xsig_pred.cols() == 2 * n_aug_ + 1);
+    
+    //check x_pred_mean vector size (predicted state mean)
+    assert(x_pred_mean.size() == n_x_);
+    
+    assert(P_pred_covs.cols() == n_x_);
+    assert(P_pred_covs.rows() == n_x_);
+    
+    assert(Zsig.rows() == z_pred.size());
+    
+    assert(S.rows() == z.size());
+    assert(z.size() == S.cols());
+    
+    //create matrix for cross correlation Tc
+    MatrixXd Tc = MatrixXd(n_x_, n_z_);
+    
+    //calculate cross correlation matrix
+    Tc.fill(0.0);
+    for (int i = 0; i < 2 * n_aug_ + 1; i++) {  //2n+1 simga points
+        //residual
+        VectorXd z_diff = Zsig.col(i) - z_pred;
+        //angle normalization
+        Tools::NormalizeAngle(z_diff(1));
+        // state difference
+        VectorXd x_diff = Xsig_pred.col(i) - x_pred_mean;
+        //angle normalization
+        Tools::NormalizeAngle(x_diff(3));
+        
+        Tc = Tc + weights_(i) * x_diff * z_diff.transpose();
+    }
+    
+    //Kalman gain K;
+    MatrixXd K = Tc * S.inverse();
+
+    //residual
+    VectorXd z_diff = z - z_pred;
+    
+    //angle normalization
+    Tools::NormalizeAngle(z_diff(1));
+    
+    //update state mean and covariance matrix
+    x_out = x_pred_mean + K * z_diff;
+    P_out = P_pred_covs - K*S*K.transpose();
 }

@@ -64,6 +64,14 @@ There are multiple ways to determine the weights omega. The only thing to rememb
 
 #### Measurement Step
 
+![alt text][image8]
+
+The major difference at this step is that we add the measurement covariance noise instead to applying the non-linear process function as I did in the previous step. This is due to the fact that the impact of the noise on the measurement is purely additive and doesn't have a non-linear relationship.
+
+![alt text][image9]
+
+#### Measurement Step
+
 At this step I would want to move the Gaussian distribution  Here are 2 often used shortcuts to reduce the computation:
 
 *   Reuse the generated sigma points from the prediction step.

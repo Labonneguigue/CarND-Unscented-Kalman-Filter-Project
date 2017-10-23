@@ -24,6 +24,13 @@ public:
      */
     VectorXd CalculateRMSE(const vector<VectorXd> &estimations, const vector<VectorXd> &ground_truth);
     
+    
+    /**
+     Normalize an angle within ]-PI;PI]
+
+     @param[in|out] angle to be normalized
+     */
+    static void NormalizeAngle(double &angle);
 };
 
 #endif /* TOOLS_H_ */

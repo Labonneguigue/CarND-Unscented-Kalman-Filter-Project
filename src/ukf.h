@@ -71,7 +71,45 @@ public:
      @param[out] x_out Predicted state vector
      @param[out] P_out Predicted covariance matrix
      */
-    void PredictMeanAndCovariance(VectorXd& x_out, MatrixXd& P_out);
+    void PredictMeanAndCovariance(MatrixXd& Xsig, VectorXd& x_pred, MatrixXd& P_pred);
+    
+    /**
+     Performs the prediction of the radar measurement.
+     
+     @param[in]  Xsig_pred Matrix (5, 15) of predicted sigma points
+     @param[out] z_out     Predicted vector z (mean of the predicted measurement)
+     @param[out] S_out     Matrix S (measurement noise covariance)
+
+     */
+    void PredictRadarMeasurement(MatrixXd Xsig_pred, VectorXd& z_out, MatrixXd& S_out);
+    
+    /**
+     Update the State vector and covariance of the Kalman Filter
+
+     @param Xsig_pred Predicted sigma points
+     @param x_pred_mean Predicted state mean
+     @param P_pred_covs Predicted state covariance
+     @param Zsig Sigma points in measurement space
+     @param z_pred Mean predicted measurement
+     @param S Covariance predicted measurement
+     @param z Incoming radar measurement
+     @param x_out Updated State
+     @param P_out Updated State covariance
+     
+     @note The matrix Tc is the matrix of cross correlation
+           K is the Kalman Gain
+     
+     @todo Refactor !
+     */
+    void UpdateState(MatrixXd &Xsig_pred,
+                          VectorXd &x_pred_mean,
+                          MatrixXd &P_pred_covs,
+                          MatrixXd &Zsig,
+                          VectorXd &z_pred,
+                          MatrixXd &S,
+                          VectorXd &z,
+                          VectorXd &x_out,
+                          MatrixXd &P_out);
     
 protected:
     
@@ -122,6 +160,9 @@ protected:
     
     ///* Sigma point spreading parameter
     double lambda_;
+    
+    ///* Radar measurement dimension
+    int n_z_;
     
 public:
     ///* state vector: [pos1 pos2 vel_abs yaw_angle yaw_rate] in SI units and rad
