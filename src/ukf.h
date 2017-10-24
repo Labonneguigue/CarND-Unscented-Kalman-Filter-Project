@@ -25,9 +25,9 @@ public:
     
     /**
      * ProcessMeasurement
-     * @param meas_package The latest measurement data of either radar or laser
+     * @param measurement_pack The latest measurement data of either radar or laser
      */
-    void ProcessMeasurement(MeasurementPackage meas_package);
+    void ProcessMeasurement(MeasurementPackage measurement_pack);
     
     /**
      * Prediction Predicts sigma points, the state, and the state covariance
@@ -60,14 +60,16 @@ public:
      * non-linear process function f()
      * @param[in|out] Xsig The generated sigma points as input
      *                and the predicted ones as output done in-place
+     * @param[in] dt  Time deelta between this measurement and the previous one
      */
-    void SigmaPointPrediction(MatrixXd& Xsig);
+    void SigmaPointPrediction(MatrixXd& Xsig, double dt = 0.1F);
     
     
     /**
      Compute the mean and covariance matrix of the predicted sigma
      points.
-
+     
+     @param[in]  Xsig  Predicted sigma points
      @param[out] x_out Predicted state vector
      @param[out] P_out Predicted covariance matrix
      */
@@ -110,6 +112,13 @@ public:
                           VectorXd &z,
                           VectorXd &x_out,
                           MatrixXd &P_out);
+
+    /**
+     Get the state vector
+
+     @return x_
+     */
+    Eigen::VectorXd stateVector();
     
 protected:
     
@@ -163,6 +172,9 @@ protected:
     
     ///* Radar measurement dimension
     int n_z_;
+
+    ///* Previous timestamp to compute dt (time bwt measurement)
+    long long previous_timestamp_;
     
 public:
     ///* state vector: [pos1 pos2 vel_abs yaw_angle yaw_rate] in SI units and rad

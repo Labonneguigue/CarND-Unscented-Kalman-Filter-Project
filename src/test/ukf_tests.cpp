@@ -215,22 +215,30 @@ TEST_F(UKFTest, UpdateState)
     mUKF.UpdateState(Xsig_pred, x, P, Zsig, z_pred, S, z, x_out, P_out);
     
     Eigen::VectorXd x_expected = Eigen::VectorXd(n_x);
-     x << 5.92276,
+     x_expected << 5.92276,
         1.41823,
         2.15593,
         0.489274,
         0.321338;
     
     Eigen::MatrixXd P_expected = Eigen::MatrixXd(n_x, n_x);
-     P << 0.00361579, -0.000357881,   0.00208316, -0.000937196,  -0.00071727,
+     P_expected << 0.00361579, -0.000357881,   0.00208316, -0.000937196,  -0.00071727,
      -0.000357881,   0.00539867,   0.00156846,   0.00455342,   0.00358885,
      0.00208316,   0.00156846,   0.00410651,   0.00160333,   0.00171811,
      -0.000937196,   0.00455342,   0.00160333,   0.00652634,   0.00669436,
     -0.00071719,   0.00358884,   0.00171811,   0.00669426,   0.00881797;
+
+    if (0){
+        std::cout << x_out << "\n\n";
+        std::cout << x_expected << "\n\n";
+        std::cout << (x_out - x_expected).norm() << "\n\n";
+        std::cout << P_out << "\n\n";
+        std::cout << P_expected << "\n\n";
+        std::cout << (P_out - P_expected).norm() << "\n\n";
+    }
     
-    
-    EXPECT_TRUE((x_out - x_expected).norm() < MAX_ABSOLUTE_ERROR * 100);
-    EXPECT_TRUE((P_out - P_expected).norm() < MAX_ABSOLUTE_ERROR * 100);
+    EXPECT_TRUE((x_out - x_expected).norm() < MAX_ABSOLUTE_ERROR );
+    EXPECT_TRUE((P_out - P_expected).norm() < MAX_ABSOLUTE_ERROR );
 
 }
 
