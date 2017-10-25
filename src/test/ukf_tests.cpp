@@ -5,16 +5,28 @@
 
 #define MAX_ABSOLUTE_ERROR 1e-4
 
-// Obvious test to check tests are working
-TEST(HelloWorld, ResetsToZero) {
-    EXPECT_EQ(0, 0);
-}
+
 
 class UKFTest : public ::testing::Test
 {
 public:
     virtual void SetUp() {
+        Eigen::VectorXd x(5);
+        x <<   5.7441,
+                1.3800,
+                2.2049,
+                0.5015,
+                0.3528;
 
+        Eigen::MatrixXd P(5, 5);
+        P <<  0.0043,   -0.0013,    0.0030,   -0.0022,   -0.0020,
+                -0.0013,    0.0077,    0.0011,    0.0071,    0.0060,
+                0.0030,    0.0011,    0.0054,    0.0007,    0.0008,
+                -0.0022,    0.0071,    0.0007,    0.0098,    0.0100,
+                -0.0020,    0.0060,    0.0008,    0.0100,    0.0123;
+
+        mUKF.stateVector(x);
+        mUKF.covarianceMatrix(P);
     }
 
     virtual void TearDown() {
@@ -22,7 +34,45 @@ public:
     }
 
     UKF mUKF;
+
 };
+
+TEST_F(UKFTest, SigmaPointGeneration){
+    Eigen::VectorXd x(5);
+    x <<   5.7441,
+    1.3800,
+    2.2049,
+    0.5015,
+    0.3528;
+
+    Eigen::MatrixXd P(5, 5);
+    P <<  0.0043,   -0.0013,    0.0030,   -0.0022,   -0.0020,
+    -0.0013,    0.0077,    0.0011,    0.0071,    0.0060,
+    0.0030,    0.0011,    0.0054,    0.0007,    0.0008,
+    -0.0022,    0.0071,    0.0007,    0.0098,    0.0100,
+    -0.0020,    0.0060,    0.0008,    0.0100,    0.0123;
+
+    mUKF.x_ = x;
+    mUKF.P_ = P;
+
+    Eigen::MatrixXd Xsig_expected(5, 11);
+    Xsig_expected << 5.7441,  5.85768,   5.7441,   5.7441,   5.7441,   5.7441,  5.63052,   5.7441,   5.7441,   5.7441,   5.7441,
+                    1.38,  1.34566,  1.52806,     1.38,     1.38,     1.38,  1.41434,  1.23194,     1.38,     1.38,     1.38,
+                    2.2049,  2.28414,  2.24557,  2.29582,   2.2049,   2.2049,  2.12566,  2.16423,  2.11398,   2.2049,   2.2049,
+                    0.5015,  0.44339, 0.631886, 0.516923, 0.595227,   0.5015,  0.55961, 0.371114, 0.486077, 0.407773,   0.5015,
+                    0.3528, 0.299973, 0.462123, 0.376339,  0.48417, 0.418721, 0.405627, 0.243477, 0.329261,  0.22143, 0.286879;
+
+    Eigen::MatrixXd Xsig(5, 11);
+    mUKF.GenerateSigmaPoints(Xsig);
+
+    if (1){
+        std::cout << Xsig << "\n\n";
+        std::cout << Xsig_expected << "\n\n";
+        std::cout << (Xsig - Xsig_expected).norm() << "\n\n";
+    }
+
+    ASSERT_TRUE((Xsig - Xsig_expected).norm() < MAX_ABSOLUTE_ERROR );
+}
 
 TEST_F(UKFTest, AugmentedSigmaPointGeneration) {
 
@@ -136,8 +186,8 @@ TEST_F(UKFTest, PredictRadarMeasurement){
 
     Eigen::VectorXd z_out = Eigen::VectorXd(3);
     Eigen::MatrixXd S_out = Eigen::MatrixXd(3, 3);
-    
-    mUKF.PredictRadarMeasurement(Xsig_pred, z_out, S_out);
+    MatrixXd Zsig(3, 15);
+    mUKF.PredictRadarMeasurement(Xsig_pred, z_out, S_out, Zsig);
     
     Eigen::VectorXd z_pred = Eigen::VectorXd(3);
     Eigen::MatrixXd S_pred = Eigen::MatrixXd(3, 3);

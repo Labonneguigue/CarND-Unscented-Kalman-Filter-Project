@@ -110,7 +110,7 @@ int main()
                     
                     //Push the current estimated x,y positon from the Kalman filter's state vector
                     
-                    VectorXd estimate = ukf.stateVector();
+                    VectorXd estimate = ukf.stateVector().head<4>();
                     
                     double p_x = estimate(0);
                     double p_y = estimate(1);

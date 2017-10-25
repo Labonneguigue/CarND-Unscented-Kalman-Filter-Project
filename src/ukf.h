@@ -34,7 +34,7 @@ public:
      * matrix
      * @param delta_t Time between k and k+1 in s
      */
-    void Prediction(double delta_t);
+    void Prediction(float delta_t);
     
     /**
      * Updates the state and the state covariance matrix using a laser measurement
@@ -47,43 +47,54 @@ public:
      * @param meas_package The measurement at k+1
      */
     void UpdateRadar(MeasurementPackage meas_package);
-    
+
+
+    /**
+     * Generate Sigma points
+     *
+     * @param[out] Xsig_out Matrix of sigma points
+     *
+     * @note  The size of the matrix is (n_x_, 2 * n_x_ + 1)
+     */
+    void GenerateSigmaPoints(MatrixXd& Xsig_out);
+
     /**
      * Generates 2 * size(x_aug_) + 1 sigma points
      * and store them in the provided matrix.
-     * @param Xsig_out Matrix containing the sigma points
+     *
+     * @param[out] Xsig_out Matrix containing the sigma points
      */
     void GenerateAugmentedSigmaPoints(MatrixXd& Xsig_out);
     
     /**
      * Predict the position of the sigma points using the
      * non-linear process function f()
-     * @param[in|out] Xsig The generated sigma points as input
-     *                and the predicted ones as output done in-place
+     * @note The generated sigma points as input and the predicted
+     *       ones as output done on member variables Xsig_aug_ & Xsig_pred_
      * @param[in] dt  Time deelta between this measurement and the previous one
      */
-    void SigmaPointPrediction(MatrixXd& Xsig, double dt = 0.1F);
+    void SigmaPointPrediction(double dt = 0.1F);
     
     
     /**
-     Compute the mean and covariance matrix of the predicted sigma
-     points.
-     
-     @param[in]  Xsig  Predicted sigma points
-     @param[out] x_out Predicted state vector
-     @param[out] P_out Predicted covariance matrix
+     * Compute the mean and covariance matrix of the predicted sigma
+     * points.
+     *
+     * @note Here are the following class member modified by this method:
+     *      [in]  Xsig_pred_  Predicted sigma points
+     *      [out] x_ Predicted state vector
+     *      [out] P_ Predicted covariance matrix
      */
-    void PredictMeanAndCovariance(MatrixXd& Xsig, VectorXd& x_pred, MatrixXd& P_pred);
+    void PredictMeanAndCovariance();
     
     /**
      Performs the prediction of the radar measurement.
      
-     @param[in]  Xsig_pred Matrix (5, 15) of predicted sigma points
      @param[out] z_out     Predicted vector z (mean of the predicted measurement)
      @param[out] S_out     Matrix S (measurement noise covariance)
-
+     @param[out] Zsig      Matrix Zsig sigma points in measurement space
      */
-    void PredictRadarMeasurement(MatrixXd Xsig_pred, VectorXd& z_out, MatrixXd& S_out);
+    void PredictRadarMeasurement(VectorXd& z_out, MatrixXd& S_out, Eigen::MatrixXd& Zsig);
     
     /**
      Update the State vector and covariance of the Kalman Filter
@@ -118,40 +129,97 @@ public:
 
      @return x_
      */
-    Eigen::VectorXd stateVector();
-    
+    inline const Eigen::VectorXd& stateVector(){
+        return x_;
+    }
+
+    /**
+     * Set the state vector
+     *
+     * @param[in] x
+     *
+     * @return bool Returns true if the size was correct
+     */
+    inline bool stateVector(Eigen::VectorXd &x){
+        if (x.size() == n_x_){
+            x_ = x;
+            return true;
+        }
+        return false;
+    }
+
+    /*
+     * Get the state covariance matrix
+     *
+     * @return MatrixXd P_
+     */
+    inline const Eigen::MatrixXd& covarianceMatrix(){
+        return P_;
+    }
+
+    /**
+     * Set the state covariance matrix
+     *
+     * @param[in] P
+     *
+     * @return bool Returns true if the size was correct
+     */
+    inline bool covarianceMatrix(Eigen::MatrixXd &P){
+        if (P.cols() == n_x_ && P.rows() == n_x_){
+            P_ = P;
+            return true;
+        }
+        return false;
+    }
+
 protected:
-    
-    ///* State dimension
-    int n_x_;
-    
+
     ///* initially set to false, set to true in first call of ProcessMeasurement
     bool is_initialized_;
-    
+
+
+    ///* State dimension
+    int n_x_;
+
+    ///* Augmented state dimension
+    int n_aug_;
+
+    ///* Process noise standard deviation longitudinal acceleration in m/s^2
+    double std_a_;
+
+    ///* Process noise standard deviation yaw acceleration in rad/s^2
+    double std_yawdd_;
+
+
     ///* if this is false, laser measurements will be ignored (except for init)
     bool use_laser_;
     
     ///* if this is false, radar measurements will be ignored (except for init)
     bool use_radar_;
-    
+
+    ///* Augmented sigma points matrix
+    MatrixXd Xsig_aug_;
+
     ///* predicted sigma points matrix
     MatrixXd Xsig_pred_;
-    
-    ///* time when the state is true, in us
-    long long time_us_;
-    
-    ///* Process noise standard deviation longitudinal acceleration in m/s^2
-    double std_a_;
-    
-    ///* Process noise standard deviation yaw acceleration in rad/s^2
-    double std_yawdd_;
-    
+
+    ///* Lidar measurement dimension
+    int n_z_laser_;
+
     ///* Laser measurement noise standard deviation position1 in m
     double std_laspx_;
     
     ///* Laser measurement noise standard deviation position2 in m
     double std_laspy_;
-    
+
+    ///* Laser measurement noise covariance matrix
+    MatrixXd R_laser_;
+
+    ///* Laser counter for NIS above specified limit
+    int nisCount_laser_;
+
+
+
     ///* Radar measurement noise standard deviation radius in m
     double std_radr_;
     
@@ -159,23 +227,30 @@ protected:
     double std_radphi_;
     
     ///* Radar measurement noise standard deviation radius change in m/s
-    double std_radrd_ ;
-    
+    double std_radrd_;
+
+    ///* Radar measurement noise covariance matrix
+    MatrixXd R_radar_;
+
+    ///* Radar measurement dimension
+    int n_z_radar_;
+
+    ///* Radar counter for NIS above specified limit
+    int nisCount_radar_;
+
     ///* Weights of sigma points
     VectorXd weights_;
-    
-    ///* Augmented state dimension
-    int n_aug_;
-    
+
     ///* Sigma point spreading parameter
     double lambda_;
-    
-    ///* Radar measurement dimension
-    int n_z_;
+
 
     ///* Previous timestamp to compute dt (time bwt measurement)
     long long previous_timestamp_;
-    
+
+    ///* time when the state is true, in us
+    long long time_us_;
+
 public:
     ///* state vector: [pos1 pos2 vel_abs yaw_angle yaw_rate] in SI units and rad
     VectorXd x_;
