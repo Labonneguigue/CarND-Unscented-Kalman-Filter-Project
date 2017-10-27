@@ -68,6 +68,7 @@ public:
      */
     static bool isNISAboveLimit(double epsilon, int df);
 
+
 private:
 
     Eigen::VectorXd mOverallSquaredSum;

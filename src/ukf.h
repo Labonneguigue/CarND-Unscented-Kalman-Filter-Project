@@ -48,16 +48,6 @@ public:
      */
     void UpdateRadar(MeasurementPackage meas_package);
 
-
-    /**
-     * Generate Sigma points
-     *
-     * @param[out] Xsig_out Matrix of sigma points
-     *
-     * @note  The size of the matrix is (n_x_, 2 * n_x_ + 1)
-     */
-    void GenerateSigmaPoints(MatrixXd& Xsig_out);
-
     /**
      * Generates 2 * size(x_aug_) + 1 sigma points
      * and store them in the provided matrix.
@@ -74,8 +64,7 @@ public:
      * @param[in] dt  Time deelta between this measurement and the previous one
      */
     void SigmaPointPrediction(double dt = 0.1F);
-    
-    
+
     /**
      * Compute the mean and covariance matrix of the predicted sigma
      * points.
@@ -86,16 +75,33 @@ public:
      *      [out] P_ Predicted covariance matrix
      */
     void PredictMeanAndCovariance();
-    
+
     /**
      Performs the prediction of the radar measurement.
-     
+
      @param[out] z_out     Predicted vector z (mean of the predicted measurement)
      @param[out] S_out     Matrix S (measurement noise covariance)
      @param[out] Zsig      Matrix Zsig sigma points in measurement space
      */
-    void PredictRadarMeasurement(VectorXd& z_out, MatrixXd& S_out, Eigen::MatrixXd& Zsig);
-    
+    void PredictRadarMeasurement(VectorXd& z_out, MatrixXd& S_out, MatrixXd& Zsig);
+
+    /**
+     @copydoc UKF::PredictRadarMeasurement(VectorXd, MatrixXd, MatrixXd)
+
+     @param[in] R   Measurement noise matrix
+     */
+    void PredictRadarMeasurement(VectorXd& z_out, MatrixXd& S_out, Eigen::MatrixXd& Zsig, MatrixXd& R);
+
+    /**
+     Maps the generated sigma points onto the Laser measurement space
+     and predict the
+
+     @param z_out Predicted measurement mean
+     @param S_out Measurement covariance
+     @param Zsig  Sigma points in measurement space
+     */
+    void PredictLaserMeasurement(VectorXd& z_out, MatrixXd& S_out, Eigen::MatrixXd& Zsig);
+
     /**
      Update the State vector and covariance of the Kalman Filter
 
@@ -165,18 +171,71 @@ public:
      * @return bool Returns true if the size was correct
      */
     inline bool covarianceMatrix(Eigen::MatrixXd &P){
-        if (P.cols() == n_x_ && P.rows() == n_x_){
+        if (P.rows() == n_x_ && P.cols() == n_x_){
             P_ = P;
             return true;
         }
         return false;
     }
 
-protected:
+    /**
+     * Get the predicted sigma points matrix
+     *
+     * @return MatrixXd Xsig_pred_
+     */
+    inline Eigen::MatrixXd& predictedSigmaPoints(){
+        return Xsig_pred_;
+    }
+
+    /**
+     * Set the predicted sigma points matrix
+     *
+     * @param[in] Xsig_pred
+     *
+     * @return bool Returns true if the size was correct
+     */
+    inline bool predictedSigmaPoints(Eigen::MatrixXd &Xsig_pred){
+        if ( (Xsig_pred.rows() == n_x_) && (Xsig_pred.cols() == (2 * n_aug_ + 1)) ){
+            Xsig_pred_ = Xsig_pred;
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Get the augmented sigma points matrix
+     *
+     * @return MatrixXd Xsig_aug_
+     */
+    inline Eigen::MatrixXd& augmentedSigmaPoints(){
+        return Xsig_aug_;
+    }
+
+    /**
+     * Set the augmented sigma points matrix
+     *
+     * @param[in] Xsig_aug
+     *
+     * @return bool Returns true if the size was correct
+     */
+    inline bool augmentedSigmaPoints(Eigen::MatrixXd &Xsig_aug){
+        if ( (Xsig_aug.rows() == n_aug_) && (Xsig_aug.cols() == (2 * n_aug_ + 1)) ){
+            Xsig_aug_ = Xsig_aug;
+            return true;
+        }
+        return false;
+    }
+
+private:
 
     ///* initially set to false, set to true in first call of ProcessMeasurement
     bool is_initialized_;
 
+    ///* state vector: [pos1 pos2 vel_abs yaw_angle yaw_rate] in SI units and rad
+    VectorXd x_;
+
+    ///* state covariance matrix
+    MatrixXd P_;
 
     ///* State dimension
     int n_x_;
@@ -251,12 +310,6 @@ protected:
     ///* time when the state is true, in us
     long long time_us_;
 
-public:
-    ///* state vector: [pos1 pos2 vel_abs yaw_angle yaw_rate] in SI units and rad
-    VectorXd x_;
-    
-    ///* state covariance matrix
-    MatrixXd P_;
 };
 
 #endif /* UKF_H */

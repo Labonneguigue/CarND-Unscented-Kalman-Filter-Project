@@ -5,8 +5,6 @@
 
 #define MAX_ABSOLUTE_ERROR 1e-4
 
-
-
 class UKFTest : public ::testing::Test
 {
 public:
@@ -37,57 +35,7 @@ public:
 
 };
 
-TEST_F(UKFTest, SigmaPointGeneration){
-    Eigen::VectorXd x(5);
-    x <<   5.7441,
-    1.3800,
-    2.2049,
-    0.5015,
-    0.3528;
-
-    Eigen::MatrixXd P(5, 5);
-    P <<  0.0043,   -0.0013,    0.0030,   -0.0022,   -0.0020,
-    -0.0013,    0.0077,    0.0011,    0.0071,    0.0060,
-    0.0030,    0.0011,    0.0054,    0.0007,    0.0008,
-    -0.0022,    0.0071,    0.0007,    0.0098,    0.0100,
-    -0.0020,    0.0060,    0.0008,    0.0100,    0.0123;
-
-    mUKF.x_ = x;
-    mUKF.P_ = P;
-
-    Eigen::MatrixXd Xsig_expected(5, 11);
-    Xsig_expected << 5.7441,  5.85768,   5.7441,   5.7441,   5.7441,   5.7441,  5.63052,   5.7441,   5.7441,   5.7441,   5.7441,
-                    1.38,  1.34566,  1.52806,     1.38,     1.38,     1.38,  1.41434,  1.23194,     1.38,     1.38,     1.38,
-                    2.2049,  2.28414,  2.24557,  2.29582,   2.2049,   2.2049,  2.12566,  2.16423,  2.11398,   2.2049,   2.2049,
-                    0.5015,  0.44339, 0.631886, 0.516923, 0.595227,   0.5015,  0.55961, 0.371114, 0.486077, 0.407773,   0.5015,
-                    0.3528, 0.299973, 0.462123, 0.376339,  0.48417, 0.418721, 0.405627, 0.243477, 0.329261,  0.22143, 0.286879;
-
-    Eigen::MatrixXd Xsig(5, 11);
-    mUKF.GenerateSigmaPoints(Xsig);
-
-    if (1){
-        std::cout << Xsig << "\n\n";
-        std::cout << Xsig_expected << "\n\n";
-        std::cout << (Xsig - Xsig_expected).norm() << "\n\n";
-    }
-
-    ASSERT_TRUE((Xsig - Xsig_expected).norm() < MAX_ABSOLUTE_ERROR );
-}
-
 TEST_F(UKFTest, AugmentedSigmaPointGeneration) {
-
-    mUKF.x_ <<   5.7441,
-                1.3800,
-                2.2049,
-                0.5015,
-                0.3528;
-
-    //create example covariance matrix
-    mUKF.P_ <<     0.0043,   -0.0013,    0.0030,   -0.0022,   -0.0020,
-                    -0.0013,    0.0077,    0.0011,    0.0071,    0.0060,
-                    0.0030,    0.0011,    0.0054,    0.0007,    0.0008,
-                    -0.0022,    0.0071,    0.0007,    0.0098,    0.0100,
-                    -0.0020,    0.0060,    0.0008,    0.0100,    0.0123;
 
     MatrixXd Xsig_aug(7, 15);
     Xsig_aug.Zero(7, 15);
@@ -108,8 +56,8 @@ TEST_F(UKFTest, AugmentedSigmaPointGeneration) {
 }
 
 TEST_F(UKFTest, PredictSigmaPoint) {
-    MatrixXd Xsig(7, 15);
-    Xsig <<  5.7441, 5.85768,  5.7441,  5.7441,  5.7441,  5.7441,  5.7441,  5.7441, 5.63052,  5.7441,  5.7441,  5.7441,  5.7441,  5.7441,  5.7441,
+    MatrixXd Xsig_aug(7, 15);
+    Xsig_aug <<  5.7441, 5.85768,  5.7441,  5.7441,  5.7441,  5.7441,  5.7441,  5.7441, 5.63052,  5.7441,  5.7441,  5.7441,  5.7441,  5.7441,  5.7441,
     1.38, 1.34566, 1.52806,   1.38, 1.38,  1.38,   1.38,   1.38, 1.41434, 1.23194,    1.38,    1.38,    1.38,    1.38,    1.38,
     2.2049, 2.28414, 2.24557, 2.29582,  2.2049,  2.2049,  2.2049,  2.2049, 2.12566, 2.16423, 2.11398,  2.2049,  2.2049,  2.2049,  2.2049,
     0.5015, 0.44339, 0.631886, 0.516923, 0.595227,  0.5015,  0.5015,  0.5015, 0.55961, 0.371114, 0.486077, 0.407773,  0.5015,  0.5015,  0.5015,
@@ -117,18 +65,22 @@ TEST_F(UKFTest, PredictSigmaPoint) {
     0,        0,       0,       0,       0,       0, 0.34641,        0,       0,       0,       0,       0,       0,-0.34641,        0,
     0,       0,       0,       0,       0,       0,       0, 0.34641,        0,       0,       0,       0,       0,       0, -0.34641;
 
+    ASSERT_TRUE(mUKF.augmentedSigmaPoints(Xsig_aug));
+
     // Second step - Prediction of the sigma points:
-    mUKF.SigmaPointPrediction(Xsig);
+    mUKF.SigmaPointPrediction();
     
-    MatrixXd result(5, 15);
-    result <<
+    MatrixXd Xsig_pred_expected(5, 15);
+    Xsig_pred_expected <<
     5.93553,  6.06251,  5.92217,   5.9415, 5.92361, 5.93516, 5.93705, 5.93553, 5.80832, 5.94481, 5.92935, 5.94553, 5.93589, 5.93401, 5.93553,
     1.48939, 1.44673, 1.66484, 1.49719,   1.508, 1.49001, 1.49022, 1.48939,  1.5308, 1.31287, 1.48182, 1.46967, 1.48876, 1.48855, 1.48939,
     2.2049, 2.28414, 2.24557, 2.29582,  2.2049,  2.2049, 2.23954,  2.2049, 2.12566, 2.16423, 2.11398,  2.2049,  2.2049, 2.17026,  2.2049,
     0.53678,0.473387,0.678098,0.554557,0.643644,0.543372,0.53678,0.538512,0.600173,0.395462,0.519003,0.429916,0.530188, 0.53678,0.535048,
     0.3528,0.299973,0.462123,0.376339,0.48417,0.418721,0.3528,0.387441,0.405627,0.243477,0.329261,0.22143,0.286879,  0.3528,0.318159;
-    
-    ASSERT_TRUE((result - Xsig).norm() < MAX_ABSOLUTE_ERROR );
+
+    MatrixXd Xsig_pred = mUKF.predictedSigmaPoints();
+
+    ASSERT_TRUE((Xsig_pred_expected - Xsig_pred).norm() < MAX_ABSOLUTE_ERROR );
 }
 
 TEST_F(UKFTest, PredictMeanAndCovariance){
@@ -141,11 +93,9 @@ TEST_F(UKFTest, PredictMeanAndCovariance){
     0.53678,0.473387,0.678098,0.554557,0.643644,0.543372,0.53678,0.538512,0.600173,0.395462,0.519003,0.429916,0.530188, 0.53678,0.535048,
     0.3528,0.299973,0.462123,0.376339,0.48417,0.418721,0.3528,0.387441,0.405627,0.243477,0.329261,0.22143,0.286879,  0.3528,0.318159;
     
-    
-    Eigen::VectorXd x_predicted = VectorXd(5);
-    Eigen::MatrixXd P_predicted = Eigen::MatrixXd(5, 5);
-    
-    mUKF.PredictMeanAndCovariance(X_predicted_sigmas, x_predicted, P_predicted);
+    ASSERT_TRUE(mUKF.predictedSigmaPoints(X_predicted_sigmas));
+
+    mUKF.PredictMeanAndCovariance();
     
     Eigen::VectorXd x_predicted_solution = VectorXd(5);
     x_predicted_solution << 5.93637,
@@ -160,7 +110,13 @@ TEST_F(UKFTest, PredictMeanAndCovariance){
     0.00341576, 0.0014923, 0.00580129, 0.000778632, 0.000792973,
     -0.00348196,0.00980182, 0.000778632, 0.0119238, 0.0112491,
     -0.00299378, 0.00791091, 0.000792973, 0.0112491, 0.0126972;
-    
+
+    Eigen::VectorXd x_predicted = VectorXd(5);
+    Eigen::MatrixXd P_predicted = Eigen::MatrixXd(5, 5);
+
+    x_predicted = mUKF.stateVector();
+    P_predicted = mUKF.covarianceMatrix();
+
     if (0){
         std::cout << x_predicted << "\n\n";
         std::cout << x_predicted_solution << "\n\n";
@@ -184,24 +140,45 @@ TEST_F(UKFTest, PredictRadarMeasurement){
     0.5367, 0.47338, 0.67809, 0.55455, 0.64364, 0.54337,  0.5367, 0.53851, 0.60017, 0.39546, 0.51900, 0.42991, 0.530188,  0.5367, 0.535048,
     0.352, 0.29997, 0.46212, 0.37633,  0.4841, 0.41872,   0.352, 0.38744, 0.40562, 0.24347, 0.32926,  0.2214, 0.28687,   0.352, 0.318159;
 
+
     Eigen::VectorXd z_out = Eigen::VectorXd(3);
     Eigen::MatrixXd S_out = Eigen::MatrixXd(3, 3);
     MatrixXd Zsig(3, 15);
-    mUKF.PredictRadarMeasurement(Xsig_pred, z_out, S_out, Zsig);
+
+    ASSERT_TRUE(mUKF.predictedSigmaPoints(Xsig_pred));
+
+    float std_radr = 0.3;
+    float std_radphi = 0.0175; // was 0.03;
+    float std_radrd = 0.1;
+
+    //add measurement noise covariance matrix
+    MatrixXd R = MatrixXd(3,3);
+    R <<    std_radr*std_radr, 0, 0,
+            0, std_radphi*std_radphi, 0,
+            0, 0,std_radrd*std_radrd;
+
+    mUKF.PredictRadarMeasurement(z_out, S_out, Zsig, R);
     
     Eigen::VectorXd z_pred = Eigen::VectorXd(3);
     Eigen::MatrixXd S_pred = Eigen::MatrixXd(3, 3);
     
     z_pred << 6.12155,
-            0.245993,
-            2.10313;
+              0.245993,
+              2.10313;
     
     S_pred << 0.0946171, -0.000139448, 0.00407016,
-            -0.000139448, 0.000617548, -0.000770652,
-            0.00407016, -0.000770652, 0.0180917;
-    
+              -0.000139448, 0.000617548, -0.000770652,
+              0.00407016, -0.000770652, 0.0180917;
+
+    if (0){
+        std::cout << S_out << "\n\n";
+        std::cout << S_pred << "\n\n";
+        std::cout << (S_out - S_pred).norm() << "\n\n";
+    }
+
     EXPECT_TRUE((z_out - z_pred).norm() < MAX_ABSOLUTE_ERROR);
     EXPECT_TRUE((S_out - S_pred).norm() < MAX_ABSOLUTE_ERROR);
+
 }
 
 TEST_F(UKFTest, UpdateState)

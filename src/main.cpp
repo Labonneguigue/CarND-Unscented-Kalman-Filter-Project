@@ -4,6 +4,7 @@
 #include <math.h>
 #include "ukf.h"
 #include "tools.h"
+#include <fstream>
 
 using namespace std;
 
@@ -37,7 +38,7 @@ int main()
     Tools tools;
     vector<VectorXd> estimations;
     vector<VectorXd> ground_truth;
-    
+
     h.onMessage([&ukf,&tools,&estimations,&ground_truth](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
         // "42" at the start of the message means there's a websocket message event.
         // The 4 signifies a websocket message
@@ -139,7 +140,18 @@ int main()
                     auto msg = "42[\"estimate_marker\"," + msgJson.dump() + "]";
                     // std::cout << msg << std::endl;
                     ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-                    
+
+                    // Log NIS values to a csv file
+                    if (sensor_type.compare("L") == 0) {
+                        ofstream myfile;
+                        myfile.open("laserNIS.csv");
+
+                        myfile.close();
+                    } else if (sensor_type.compare("R") == 0) {
+
+                    }
+
+
                 }
             } else {
                 
