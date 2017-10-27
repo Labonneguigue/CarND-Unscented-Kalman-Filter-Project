@@ -40,7 +40,10 @@ TEST_F(UKFTest, AugmentedSigmaPointGeneration) {
     MatrixXd Xsig_aug(7, 15);
     Xsig_aug.Zero(7, 15);
 
-    mUKF.GenerateAugmentedSigmaPoints(Xsig_aug);
+    float std_a = 0.2;
+    float std_yawdd = 0.2;
+
+    mUKF.GenerateAugmentedSigmaPoints(Xsig_aug, std_a, std_yawdd);
 
     MatrixXd result(7, 15);
     result <<  5.7441, 5.85768,  5.7441,  5.7441,  5.7441,  5.7441,  5.7441,  5.7441, 5.63052,  5.7441,  5.7441,  5.7441,  5.7441,  5.7441,  5.7441,
@@ -211,7 +214,11 @@ TEST_F(UKFTest, UpdateState)
     0.0034157,   0.001492,  0.0058012, 0.00077863, 0.000792973,
     -0.0034819,  0.0098018, 0.00077863,   0.011923,   0.0112491,
     -0.0029937,  0.0079109, 0.00079297,   0.011249,   0.0126972;
-    
+
+    ASSERT_TRUE(mUKF.stateVector(x));
+    ASSERT_TRUE(mUKF.covarianceMatrix(P));
+    ASSERT_TRUE(mUKF.predictedSigmaPoints(Xsig_pred));
+
     //create example matrix with sigma points in measurement space
     MatrixXd Zsig = MatrixXd(n_z, 2 * n_aug + 1);
     Zsig << 6.1190,  6.2334,  6.1531,  6.1283,  6.1143,  6.1190,  6.1221,  6.1190,  6.0079,  6.0883,  6.1125,  6.1248,  6.1190,  6.1188,  6.12057,
@@ -239,7 +246,7 @@ TEST_F(UKFTest, UpdateState)
     Eigen::VectorXd x_out;
     Eigen::MatrixXd P_out;
     
-    mUKF.UpdateState(Xsig_pred, x, P, Zsig, z_pred, S, z, x_out, P_out);
+    mUKF.UpdateState(Zsig, z_pred, S, z);
     
     Eigen::VectorXd x_expected = Eigen::VectorXd(n_x);
      x_expected << 5.92276,
@@ -254,6 +261,9 @@ TEST_F(UKFTest, UpdateState)
      0.00208316,   0.00156846,   0.00410651,   0.00160333,   0.00171811,
      -0.000937196,   0.00455342,   0.00160333,   0.00652634,   0.00669436,
     -0.00071719,   0.00358884,   0.00171811,   0.00669426,   0.00881797;
+
+    x_out = mUKF.stateVector();
+    P_out = mUKF.covarianceMatrix();
 
     if (0){
         std::cout << x_out << "\n\n";

@@ -27,26 +27,26 @@ public:
      * ProcessMeasurement
      * @param measurement_pack The latest measurement data of either radar or laser
      */
-    void ProcessMeasurement(MeasurementPackage measurement_pack);
+    void ProcessMeasurement(const MeasurementPackage& measurement_pack);
     
     /**
      * Prediction Predicts sigma points, the state, and the state covariance
      * matrix
      * @param delta_t Time between k and k+1 in s
      */
-    void Prediction(float delta_t);
+    void Prediction(const float delta_t);
     
     /**
      * Updates the state and the state covariance matrix using a laser measurement
      * @param meas_package The measurement at k+1
      */
-    void UpdateLidar(MeasurementPackage meas_package);
+    void UpdateLidar(const MeasurementPackage& meas_package);
     
     /**
      * Updates the state and the state covariance matrix using a radar measurement
      * @param meas_package The measurement at k+1
      */
-    void UpdateRadar(MeasurementPackage meas_package);
+    void UpdateRadar(const MeasurementPackage& meas_package);
 
     /**
      * Generates 2 * size(x_aug_) + 1 sigma points
@@ -57,13 +57,22 @@ public:
     void GenerateAugmentedSigmaPoints(MatrixXd& Xsig_out);
     
     /**
+     * @copydoc GenerateAugmentedSigmaPoints(MatrixXd&)
+     *
+     * @param[in] std_a  Acceleration process noise
+     * @param[in] std_yawdd Yaw acceleration process noise
+     */
+    void GenerateAugmentedSigmaPoints(MatrixXd& Xsig_out, const float std_a, const float std_yawdd);
+
+
+    /**
      * Predict the position of the sigma points using the
      * non-linear process function f()
      * @note The generated sigma points as input and the predicted
      *       ones as output done on member variables Xsig_aug_ & Xsig_pred_
      * @param[in] dt  Time deelta between this measurement and the previous one
      */
-    void SigmaPointPrediction(double dt = 0.1F);
+    void SigmaPointPrediction(const double dt = 0.1F);
 
     /**
      * Compute the mean and covariance matrix of the predicted sigma
@@ -105,30 +114,19 @@ public:
     /**
      Update the State vector and covariance of the Kalman Filter
 
-     @param Xsig_pred Predicted sigma points
-     @param x_pred_mean Predicted state mean
-     @param P_pred_covs Predicted state covariance
      @param Zsig Sigma points in measurement space
      @param z_pred Mean predicted measurement
      @param S Covariance predicted measurement
      @param z Incoming radar measurement
-     @param x_out Updated State
-     @param P_out Updated State covariance
-     
+
      @note The matrix Tc is the matrix of cross correlation
            K is the Kalman Gain
-     
-     @todo Refactor !
+
      */
-    void UpdateState(MatrixXd &Xsig_pred,
-                          VectorXd &x_pred_mean,
-                          MatrixXd &P_pred_covs,
-                          MatrixXd &Zsig,
-                          VectorXd &z_pred,
-                          MatrixXd &S,
-                          VectorXd &z,
-                          VectorXd &x_out,
-                          MatrixXd &P_out);
+    void UpdateState(MatrixXd &Zsig,
+                     VectorXd &z_pred,
+                     MatrixXd &S,
+                     const VectorXd &z);
 
     /**
      Get the state vector
@@ -274,9 +272,6 @@ private:
     ///* Laser measurement noise covariance matrix
     MatrixXd R_laser_;
 
-    ///* Laser counter for NIS above specified limit
-    int nisCount_laser_;
-
 
 
     ///* Radar measurement noise standard deviation radius in m
@@ -294,8 +289,6 @@ private:
     ///* Radar measurement dimension
     int n_z_radar_;
 
-    ///* Radar counter for NIS above specified limit
-    int nisCount_radar_;
 
     ///* Weights of sigma points
     VectorXd weights_;
@@ -306,9 +299,6 @@ private:
 
     ///* Previous timestamp to compute dt (time bwt measurement)
     long long previous_timestamp_;
-
-    ///* time when the state is true, in us
-    long long time_us_;
 
 };
 

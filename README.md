@@ -18,6 +18,10 @@ In this project I implemented an Unscented Kalman Filter to estimate the state o
 [image7]: images/prediction.tiff "prediction"
 [image8]: images/meas_pred.tiff "meas_pred"
 [image9]: images/meas_pred2.tiff "meas_pred2"
+[image10]: images/a_2_yawdd_03.tiff "better"
+[image11]: images/a_3_yawdd_08.tiff "worse"
+[image12]: images/result.tiff "result"
+[image13]: images/sparsetiff "sparse"
 
 ## Project Explanation
 
@@ -93,7 +97,7 @@ Here are 2 often used shortcuts to reduce the computation:
 *   
 
 To be able to use the generated sigma points from the prediction step, I mapped them onto
-the measurement space. This means that each points is represented by the
+the measurement space.
 
 ![alt text][image8]
 
@@ -104,16 +108,34 @@ non-linear relationship.
 
 ![alt text][image9]
 
+For the laser data, it was even easier since the sigma points are already expressed in the measurement space (px and py).
+
+### Parameter Tuning
+
+I tweaked the process noise standard deviations (longitudinal and rotation accelerations) to obtain the best ones.
+
+I first started with
+
+```cpp
+std_a = 3;
+std_yawdd = 0.8;
+```
+
+and obtained the following RMSE (root mean squared error):
+
+![alt text][image11]
+
+I then observed that by constraining them a little more, the result did improve.
+
+![alt text][image10]
 
 ## Unit Tests
 
 It is the first time I created unit tests for a project of the SDC Nanodegree and
 I'm very glad I took the time to do it. After implementing every functions I
-needed to complete each step of the UKF, my project was done ! No debugging time
-was needed whatsoever.
+needed to complete each step of the UKF, my project was done ! No debugging time was needed whatsoever.
 
-It will also save me some time if later on I want to merge this code into a larger
-project.
+It will also save me some time if later on I want to merge this code into a larger project.
 
 To run the tests:
 
@@ -125,6 +147,17 @@ or
 ```bash
 ./unit_tests
 ```
+
+## Final result
+
+Here is a screenshot of the final result:
+
+![alt text][image12]
+
+If we zoom closer, it is quite impressive to see that the green marks (the filtered position of the car) seems very accurate and filters out very well the sparse measurement from both sensors.
+
+![alt text][image13]
+
 
 ## Installation
 
