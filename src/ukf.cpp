@@ -46,9 +46,9 @@ UKF::UKF()
     // Lidar measurement dimension is x and y position -> 2
     n_z_laser_ = 2;
     // Laser measurement noise standard deviation position1 in m
-    std_laspx_ = 0.14;
+    std_laspx_ = 0.15;
     // Laser measurement noise standard deviation position2 in m
-    std_laspy_ = 0.14;
+    std_laspy_ = 0.15;
     // Laser measurement noise covariance matrix
     R_laser_ = MatrixXd(n_z_laser_, n_z_laser_);
     R_laser_ << std_laspx_ * std_laspx_, 0,
