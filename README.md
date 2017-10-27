@@ -90,12 +90,8 @@ points when they were calculated.
 #### Measurement Step
 
 The measurement step moves the gaussian distribution predicted by the prediction
-step according to the receive actual sensor measurement.
-
-Here are 2 often used shortcuts to reduce the computation:
-
-*   Reuse the generated sigma points from the prediction step.
-*   
+step according to the receive actual sensor measurement. The shortcut that is often
+used is to generated sigma points from the prediction step.
 
 To be able to use the generated sigma points from the prediction step, I mapped them onto
 the measurement space.
@@ -116,6 +112,7 @@ For the laser data, it was even easier since the sigma points are already expres
 #### Process noise
 
 I tweaked the process noise standard deviations (longitudinal and rotation accelerations) to obtain the best ones.
+The way to find a first estimate of these values is to think about what they represent in real life. The square root of `std_a` is expressed in meters / second. The question is what is the expected acceleration of a bicycle at any given time. 
 
 I first started with
 
@@ -172,7 +169,7 @@ I finally obtained NIS values as follow:
 ```
 
 As a caveat, it seemed to have increased a tiny bit the RMSE of each observed parameters except the speed error in the x direction `vx` which is the highest of them all.
-
+Second caveat, I could not actually change these values to pass the project ...
 
 ## Unit Tests
 

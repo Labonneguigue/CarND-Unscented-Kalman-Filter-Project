@@ -193,7 +193,7 @@ public:
      * @return bool Returns true if the size was correct
      */
     inline bool predictedSigmaPoints(Eigen::MatrixXd &Xsig_pred){
-        if ( (Xsig_pred.rows() == n_x_) && (Xsig_pred.cols() == (2 * n_aug_ + 1)) ){
+        if ( (Xsig_pred.rows() == n_x_) && (Xsig_pred.cols() == (n_sig_)) ){
             Xsig_pred_ = Xsig_pred;
             return true;
         }
@@ -217,7 +217,7 @@ public:
      * @return bool Returns true if the size was correct
      */
     inline bool augmentedSigmaPoints(Eigen::MatrixXd &Xsig_aug){
-        if ( (Xsig_aug.rows() == n_aug_) && (Xsig_aug.cols() == (2 * n_aug_ + 1)) ){
+        if ( (Xsig_aug.rows() == n_aug_) && (Xsig_aug.cols() == (n_sig_)) ){
             Xsig_aug_ = Xsig_aug;
             return true;
         }
@@ -240,6 +240,9 @@ private:
 
     ///* Augmented state dimension
     int n_aug_;
+
+    ///* Number of augmented sigma points
+    int n_sig_;
 
     ///* Process noise standard deviation longitudinal acceleration in m/s^2
     double std_a_;
