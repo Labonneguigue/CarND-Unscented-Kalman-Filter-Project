@@ -272,7 +272,11 @@ private:
     ///* Laser measurement noise covariance matrix
     MatrixXd R_laser_;
 
+    ///* Number of laser measurements
+    uint16_t nbLaserMeasurements_;
 
+    ///* Number of laser measurement below the expected 95% limit
+    uint16_t laserNISBelowLimit_;
 
     ///* Radar measurement noise standard deviation radius in m
     double std_radr_;
@@ -288,6 +292,12 @@ private:
 
     ///* Radar measurement dimension
     int n_z_radar_;
+
+    ///* Number of laser measurements
+    uint16_t nbRadarMeasurements_;
+
+    ///* Number of laser measurement below the expected 95% limit
+    uint16_t radarNISBelowLimit_;
 
 
     ///* Weights of sigma points

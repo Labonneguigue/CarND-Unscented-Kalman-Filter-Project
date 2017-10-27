@@ -21,7 +21,8 @@ In this project I implemented an Unscented Kalman Filter to estimate the state o
 [image10]: images/a_2_yawdd_03.tiff "better"
 [image11]: images/a_3_yawdd_08.tiff "worse"
 [image12]: images/result.tiff "result"
-[image13]: images/sparsetiff "sparse"
+[image13]: images/sparse.tiff "sparse"
+[image14]: images/nis.tiff "nis"
 
 ## Project Explanation
 
@@ -112,6 +113,8 @@ For the laser data, it was even easier since the sigma points are already expres
 
 ### Parameter Tuning
 
+#### Process noise
+
 I tweaked the process noise standard deviations (longitudinal and rotation accelerations) to obtain the best ones.
 
 I first started with
@@ -129,13 +132,53 @@ I then observed that by constraining them a little more, the result did improve.
 
 ![alt text][image10]
 
+I ended up with these process noises:
+
+```cpp
+std_a = 2;
+std_yawdd = 0.3;
+```
+
+#### Measurement noise
+
+I calculated the NIS (Normalized Innovation Squared) for each measurements to assess whether my measurement noises were set properly.
+
+![alt text][image14]
+
+I obtained the following result at the end of the simulation using the dataset 1:
+
+```bash
+82.7309 % radar measurement below 95% limit.
+97.992 % laser measurement below 95% limit.
+```
+
+Having only 82% of epsilon values under the 95% limit means that I was underestimating the uncertainty (therefore the noise) of the radar measurements.
+
+On the contrary, having 98% of the laser measurements below the 95% limit (taken this time with 2 degrees of freedom instead of 3) means that I was overestimating the uncertainty of the laser measurements.
+
+As a result, I changed the radar measurement noise standard deviation angle from `std_radphi_ = 0.0175;` to `std_radphi_ = 0.03;`.
+
+I also changed reduced the laser measurement noise by `0.01` to:
+```c++
+std_laspx_ = 0.14;
+std_laspy_ = 0.14;
+```
+
+I finally obtained NIS values as follow:
+
+```bash
+95.9839 % radar measurement below 95% limit.
+95.9839 % laser measurement below 95% limit.
+```
+
+As a caveat, it seemed to have increased a tiny bit the RMSE of each observed parameters except the speed error in the x direction `vx` which is the highest of them all.
+
+
 ## Unit Tests
 
-It is the first time I created unit tests for a project of the SDC Nanodegree and
-I'm very glad I took the time to do it. After implementing every functions I
-needed to complete each step of the UKF, my project was done ! No debugging time was needed whatsoever.
+It is the first time I created unit tests for a project of the SDC Nanodegree and I'm very glad I took the time to do it. After implementing every functions I needed to complete each step of the UKF, my project was done ! No debugging time was needed whatsoever.
 
-It will also save me some time if later on I want to merge this code into a larger project.
+It will also save me some time if later on I want to merge this code into a larger project because if something goes wrong the individual functions won't be the cause. I'll just have to write integration tests.
 
 To run the tests:
 
@@ -148,6 +191,54 @@ or
 ./unit_tests
 ```
 
+Here is my unit tests output:
+
+```bash
+[==========] Running 12 tests from 4 test cases.
+[----------] Global test environment set-up.
+[----------] 1 test from Normalize
+[ RUN      ] Normalize.EdgeCases
+[       OK ] Normalize.EdgeCases (0 ms)
+[----------] 1 test from Normalize (0 ms total)
+
+[----------] 2 tests from NIS
+[ RUN      ] NIS.NIS_ZeroVectors
+[       OK ] NIS.NIS_ZeroVectors (0 ms)
+[ RUN      ] NIS.NIS_ProperFunctionning
+[       OK ] NIS.NIS_ProperFunctionning (0 ms)
+[----------] 2 tests from NIS (0 ms total)
+
+[----------] 4 tests from isNISAboveLimit
+[ RUN      ] isNISAboveLimit.DF_2_Below
+[       OK ] isNISAboveLimit.DF_2_Below (0 ms)
+[ RUN      ] isNISAboveLimit.DF_2_Above
+[       OK ] isNISAboveLimit.DF_2_Above (0 ms)
+[ RUN      ] isNISAboveLimit.DF_3_Below
+[       OK ] isNISAboveLimit.DF_3_Below (0 ms)
+[ RUN      ] isNISAboveLimit.DF_3_Above
+[       OK ] isNISAboveLimit.DF_3_Above (0 ms)
+[----------] 4 tests from isNISAboveLimit (0 ms total)
+
+[----------] 5 tests from UKFTest
+[ RUN      ] UKFTest.AugmentedSigmaPointGeneration
+[       OK ] UKFTest.AugmentedSigmaPointGeneration (1 ms)
+[ RUN      ] UKFTest.PredictSigmaPoint
+[       OK ] UKFTest.PredictSigmaPoint (0 ms)
+[ RUN      ] UKFTest.PredictMeanAndCovariance
+[       OK ] UKFTest.PredictMeanAndCovariance (0 ms)
+[ RUN      ] UKFTest.PredictRadarMeasurement
+[       OK ] UKFTest.PredictRadarMeasurement (1 ms)
+[ RUN      ] UKFTest.UpdateState
+[       OK ] UKFTest.UpdateState (0 ms)
+[----------] 5 tests from UKFTest (2 ms total)
+
+[----------] Global test environment tear-down
+[==========] 12 tests from 4 test cases ran. (3 ms total)
+[  PASSED  ] 12 tests.
+Program ended with exit code: 0
+```
+
+
 ## Final result
 
 Here is a screenshot of the final result:
@@ -157,7 +248,6 @@ Here is a screenshot of the final result:
 If we zoom closer, it is quite impressive to see that the green marks (the filtered position of the car) seems very accurate and filters out very well the sparse measurement from both sensors.
 
 ![alt text][image13]
-
 
 ## Installation
 

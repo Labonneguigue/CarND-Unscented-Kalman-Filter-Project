@@ -40,7 +40,7 @@ public:
      @return Epsilon    Scalar number 
 
      */
-    static inline double NIS(Eigen::VectorXd &z_pred, Eigen::VectorXd &z_meas, Eigen::MatrixXd &S){
+    static inline double NIS(const Eigen::VectorXd &z_pred, const Eigen::VectorXd &z_meas, const Eigen::MatrixXd &S){
         return ((z_meas - z_pred).transpose() * S.inverse() * (z_meas - z_pred));
     }
 

@@ -9,6 +9,7 @@ using Eigen::VectorXd;
 using std::vector;
 
 #define CLOSE_TO_ZERO 0.001
+#define NIS_DEBUG     1
 
 /**
  * Initializes Unscented Kalman filter
@@ -48,19 +49,22 @@ UKF::UKF()
     // Lidar measurement dimension is x and y position -> 2
     n_z_laser_ = 2;
     // Laser measurement noise standard deviation position1 in m
-    std_laspx_ = 0.15;
+    std_laspx_ = 0.14;
     // Laser measurement noise standard deviation position2 in m
-    std_laspy_ = 0.15;
+    std_laspy_ = 0.14;
     // Laser measurement noise covariance matrix
     R_laser_ = MatrixXd(n_z_laser_, n_z_laser_);
     R_laser_ << std_laspx_ * std_laspx_, 0,
                 0, std_laspy_ * std_laspy_;
 
+    nbLaserMeasurements_ = 0U;
+    laserNISBelowLimit_ = 0U;
+
     n_z_radar_ = 3; //set measurement dimension, radar can measure r, phi, and r_dot
     // Radar measurement noise standard deviation radius in m
     std_radr_ = 0.3;
     // Radar measurement noise standard deviation angle in rad
-    std_radphi_ = 0.0175; // was 0.03;
+    std_radphi_ = 0.03; // was 0.03;
     // Radar measurement noise standard deviation radius change in m/s
     std_radrd_ = 0.3;
 
@@ -68,6 +72,9 @@ UKF::UKF()
     R_radar_ <<    std_radr_*std_radr_, 0, 0,
                    0, std_radphi_*std_radphi_, 0,
                    0, 0,std_radrd_*std_radrd_;
+
+    nbRadarMeasurements_ = 0U;
+    radarNISBelowLimit_ = 0U;
 
     //set vector for weights
     weights_ = VectorXd(2*n_aug_+1);
@@ -178,6 +185,16 @@ void UKF::UpdateLidar(const MeasurementPackage& meas_package) {
     MatrixXd Zsig(n_z_laser_, 2 * n_aug_ + 1);
 
     PredictLaserMeasurement(z_pred, S_pred, Zsig);
+
+#ifdef NIS_DEBUG
+    float epsilon = Tools::NIS(z_pred, meas_package.raw_measurements_, S_pred);
+    if ( !Tools::isNISAboveLimit(epsilon, 2) ){
+        laserNISBelowLimit_++;
+    }
+    nbLaserMeasurements_++;
+    std::cout << static_cast<float>(laserNISBelowLimit_) / static_cast<float>(nbLaserMeasurements_) * 100.0 << " % laser measurement below 95% limit.\n";
+#endif
+
     UpdateState(Zsig, z_pred, S_pred, meas_package.raw_measurements_);
 }
 
@@ -191,6 +208,16 @@ void UKF::UpdateRadar(const MeasurementPackage& meas_package) {
     MatrixXd Zsig(n_z_radar_, 2 * n_aug_ + 1);
 
     PredictRadarMeasurement(z_pred, S_pred, Zsig);
+
+#ifdef NIS_DEBUG
+    float epsilon = Tools::NIS(z_pred, meas_package.raw_measurements_, S_pred);
+    if ( !Tools::isNISAboveLimit(epsilon, 3) ){
+        radarNISBelowLimit_++;
+    }
+    nbRadarMeasurements_++;
+    std::cout << static_cast<float>(radarNISBelowLimit_) / static_cast<float>(nbRadarMeasurements_) * 100.0 << " % radar measurement below 95% limit.\n";
+#endif
+
     UpdateState(Zsig, z_pred, S_pred, meas_package.raw_measurements_);
 }
 
